@@ -20,6 +20,9 @@ import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -29,19 +32,20 @@ class MainActivity : ComponentActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
 
-    fun sendLocationUpdate(lat:Number, lng:Number) {
+    suspend fun sendLocationUpdate(lat:Number, lng:Number) {
         val host = "138.124.102.191"
         val port = "9038"
         val mURL = URL("http://${host}:${port}/api/position_log")
 
         try {
             with(mURL.openConnection() as HttpURLConnection) {
+                println(mURL)
                 // optional default is GET
                 requestMethod = "POST"
                 addRequestProperty("Authorization", "Bearer testandroidapp")
                 setRequestProperty("Content-Type", "application/json");
                 setDoOutput(true);
-                val jsonInputString = "{ \"lat\": $lat, \"lng\": $lng }"
+                val jsonInputString = "{ \"Latitude\": $lat, \"Longitude\": $lng }"
 
                 getOutputStream().use { os ->
                     val input = jsonInputString.toByteArray(charset("utf-8"))
@@ -53,8 +57,9 @@ class MainActivity : ComponentActivity() {
                 isOnline = true;
             }
         } catch (e:Exception) {
-            this.isOnline = true
+            this.isOnline = false
             println(e)
+            println(e.cause)
         }
     }
 
@@ -72,7 +77,10 @@ class MainActivity : ComponentActivity() {
                 val mt = "{\n    \"lat\": ${lat ?: "null"},\n    \"lng\": ${lng ?: "null"},\n    \"utime\": ${utime ?: "null"}\n}"
 
                 if (lat != null && lng !== null) {
-                    sendLocationUpdate(lat, lng)
+                    val scope = CoroutineScope(Dispatchers.IO)
+                    scope.launch {
+                        sendLocationUpdate(lat, lng)
+                    }
                 }
 
                 setContent {
@@ -137,3 +145,5 @@ fun GreetingPreview() {
         Greeting(false, "null")
     }
 }
+
+
