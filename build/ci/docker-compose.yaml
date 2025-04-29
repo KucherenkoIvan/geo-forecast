@@ -4,13 +4,13 @@ version: '3'
 # Define services
 services:
   # App Service
-  app:
+  geo-forecast:
     # Configuration for building the docker image for the service
     build:
       context: ../../ # Use an image built from the specified dockerfile in the current directory.
       dockerfile: ./build/package/Dockerfile
     ports:
-      - "9038:9038" # Forward the exposed port 8080 on the container to port 8080 on the host machine
+      - "8080:8080" # Forward the exposed port 8088 on the container to port 9038 on the host machine
     restart: unless-stopped
     depends_on:
       - postgres
@@ -25,7 +25,6 @@ services:
       ACCEPT_KEYS: testandroidapp
       # Http
       RESTART_ATTEMPTS: 25
-      LISTEN_PORT: 9038
     networks: # Networks to join (Services on the same network can communicate with each other using their name)
       - backend
   postgres:

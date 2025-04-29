@@ -64,13 +64,16 @@ func route(method string, prefix string, handler http.HandlerFunc) {
 	}
 
 	if !is_registered {
+		log.Printf("[HTTP] Mapped %s %s", method, prefix)
 		http.HandleFunc(prefix, func(w http.ResponseWriter, r *http.Request) {
 			key := getRouteKey(r.Method, prefix)
 			handler := handlers[key]
 			if handler == nil {
 				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			} else {
+				log.Printf("[HTTP] Request on %s %s", method, prefix)
 				handler(w, r)
+				log.Printf("[HTTP] Handled %s %s", method, prefix)
 			}
 		})
 	}
@@ -87,8 +90,8 @@ func Start() {
 
 	var error error
 	for i := 0; i < config.Values.RESTART_ATTEMPTS; i++ {
-		address := fmt.Sprintf("%s%d", "localhost:", config.Values.LISTEN_PORT+i)
-		log.Printf("Starting http server on %s...", address)
+		address := fmt.Sprintf("%s%d", ":", config.Values.LISTEN_PORT+i)
+		log.Printf("[HTTP] Starting http server on %s...", address)
 		error = http.ListenAndServe(address, nil)
 		log.Printf("Error %s", error)
 	}
