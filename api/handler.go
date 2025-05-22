@@ -1,14 +1,18 @@
 package http
 
 import (
+	"errors"
 	"fmt"
 	"geoforecast/api/controllers"
 	"geoforecast/internal/config"
 	"geoforecast/web/templates"
-	"github.com/a-h/templ"
+	"io/fs"
 	"log"
 	"net/http"
+	"os"
 	"strings"
+
+	"github.com/a-h/templ"
 )
 
 var (
@@ -83,6 +87,17 @@ func route(method string, prefix string, handler http.HandlerFunc) {
 	registered_prefixes = append(registered_prefixes, prefix)
 }
 
+func exists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
+	return false, err
+}
+
 func Start() {
 	handlers = make(map[string]http.HandlerFunc)
 	registered_prefixes = []string{}
@@ -92,21 +107,11 @@ func Start() {
 	route("GET", "/api/tracks", withAuth(controllers.TracksList))
 	route("GET", "/api/track", withAuth(controllers.Track))
 
-	route("GET", "/static", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("alkwdjlawjdawldkjalwkdjwlka")
-		fmt.Println(r.URL)
+	// serve static files
+	route("GET", "/static", http.FileServer(http.Dir("web")).ServeHTTP)
 
-	})
-
-	route("GET", "/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println(r.URL.Path)
-		if strings.Contains(r.URL.Path, "/static/") {
-			http.FileServer(http.Dir("../web")).ServeHTTP(w, r)
-			return
-		}
-
-		templ.Handler(templates.IndexPage()).ServeHTTP(w, r)
-	})
+	// serve web ui
+	route("GET", "/", templ.Handler(templates.IndexPage()).ServeHTTP)
 
 	var error error
 	for i := 0; i < config.Values.RESTART_ATTEMPTS; i++ {
