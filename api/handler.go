@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"geoforecast/api/controllers"
 	"geoforecast/internal/config"
+	"geoforecast/web/templates"
+	"github.com/a-h/templ"
 	"log"
 	"net/http"
 	"strings"
@@ -87,6 +89,24 @@ func Start() {
 
 	route("GET", "/app/info", controllers.AppInfo)
 	route("POST", "/api/position_log", withAuth(controllers.PositionLog))
+	route("GET", "/api/tracks", withAuth(controllers.TracksList))
+	route("GET", "/api/track", withAuth(controllers.Track))
+
+	route("GET", "/static", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("alkwdjlawjdawldkjalwkdjwlka")
+		fmt.Println(r.URL)
+
+	})
+
+	route("GET", "/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println(r.URL.Path)
+		if strings.Contains(r.URL.Path, "/static/") {
+			http.FileServer(http.Dir("../web")).ServeHTTP(w, r)
+			return
+		}
+
+		templ.Handler(templates.IndexPage()).ServeHTTP(w, r)
+	})
 
 	var error error
 	for i := 0; i < config.Values.RESTART_ATTEMPTS; i++ {
