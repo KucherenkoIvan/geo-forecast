@@ -12,7 +12,7 @@ func TracksList(w http.ResponseWriter, r *http.Request) {
 	log.Printf("\n\n####### GET TRACKS LIST #######\n\n")
 
 	var tracks []models.GeoPositionLog
-	db.Connection.Select("TrackId").Find(&tracks).Group("TrackId")
+	db.Connection.Distinct("TrackId").Find(&tracks)
 
 	w.Header().Add("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)

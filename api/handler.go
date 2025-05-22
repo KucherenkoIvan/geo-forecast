@@ -104,14 +104,17 @@ func Start() {
 
 	route("GET", "/app/info", controllers.AppInfo)
 	route("POST", "/api/position_log", withAuth(controllers.PositionLog))
-	route("GET", "/api/tracks", withAuth(controllers.TracksList))
-	route("GET", "/api/track", withAuth(controllers.Track))
+	route("GET", "/api/tracks", controllers.TracksList)
+	route("GET", "/api/track", controllers.Track)
 
-	// serve static files
-	route("GET", "/static", http.FileServer(http.Dir("web")).ServeHTTP)
+	route("GET", "/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/static/") {
+			http.FileServer(http.Dir("web")).ServeHTTP(w, r)
+			return
+		}
 
-	// serve web ui
-	route("GET", "/", templ.Handler(templates.IndexPage()).ServeHTTP)
+		templ.Handler(templates.IndexPage()).ServeHTTP(w, r)
+	})
 
 	var error error
 	for i := 0; i < config.Values.RESTART_ATTEMPTS; i++ {
