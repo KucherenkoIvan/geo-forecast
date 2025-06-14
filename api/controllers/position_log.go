@@ -10,48 +10,55 @@ import (
 	"time"
 )
 
+type PositionLogRequest struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Timestamp int64   `json:"timestamp"`
+	DeviceID  string  `json:"device_id"`
+	SessionID string  `json:"session_id"`
+}
+
 func PositionLog(w http.ResponseWriter, r *http.Request) {
 	log.Printf("\n\n####### ADD POSITION LOG#######\n\n")
 
-	log.Printf("get track id from query\n")
-	trackId := r.URL.Query().Get("trackId")
+	decoder := json.NewDecoder(r.Body)
+	var body PositionLogRequest
 
-	if trackId == "" {
-		log.Println("got empty trackId, not inserting\n")
-		fmt.Fprintln(w, "OK")
+	err := decoder.Decode(&body)
+	if err != nil {
+		log.Printf("Error decoding request body: %v\n", err)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("end get track id from query, id: %s\n", trackId)
-
-	decoder := json.NewDecoder(r.Body)
-
-	var body struct {
-		Latitude  float64
-		Longitude float64
+	// Validate required fields
+	if body.DeviceID == "" || body.SessionID == "" {
+		log.Println("Missing device_id or session_id")
+		http.Error(w, "Missing required fields", http.StatusBadRequest)
+		return
 	}
 
-	err := decoder.Decode(&body)
-
-	log.Printf("body parse end, error == nil = %t\n", err == nil)
-
-	if err == nil {
-		timestamp := time.Now().UnixMilli()
-
-		log.Printf("got device id\n")
-
-		rec := models.GeoPositionLog{
-			TrackId:   trackId,
-			Latitude:  body.Latitude,
-			Longitude: body.Longitude,
-			Timestamp: timestamp,
-		}
-
-		db.Connection.Create(&rec)
-
-		log.Printf("data inserted, id: %d\n", rec.ID)
+	// Use provided timestamp or current time if not provided
+	timestamp := body.Timestamp
+	if timestamp == 0 {
+		timestamp = time.Now().UnixMilli()
 	}
 
+	rec := models.GeoPositionLog{
+		TrackId:   body.SessionID, // Use session ID as track ID
+		DeviceId:  body.DeviceID,
+		Latitude:  body.Latitude,
+		Longitude: body.Longitude,
+		Timestamp: timestamp,
+	}
+
+	if err := db.Connection.Create(&rec).Error; err != nil {
+		log.Printf("Error inserting data: %v\n", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Data inserted, id: %d\n", rec.ID)
 	fmt.Fprintln(w, "OK")
 	log.Printf("\n\n####### END ADD POSITION LOG #######\n\n")
 }
